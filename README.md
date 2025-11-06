@@ -1,7 +1,5 @@
 <div align="center">
 
-![QuantArenaOSS](https://raw.githubusercontent.com/gtd138/QuantArenaOSS/main/QuantArenaOSS.png)
-
 # 🏆 AI Quantitative Trading Arena
 ### AI量化竞技场
 
@@ -825,3 +823,11 @@ MIT License
 **Version**: 2.0.0  
 **Tech Stack**: Python + FastAPI + LangGraph + Baostock + AI Models  
 **Last Updated**: 2025-10-29
+
+---
+
+<div align="center">
+
+![QuantArenaOSS](https://raw.githubusercontent.com/gtd138/QuantArenaOSS/main/QuantArenaOSS.png)
+
+</div>
