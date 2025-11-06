@@ -101,8 +101,8 @@
 
 **方式1：Git克隆（推荐）**
 ```bash
-git clone https://github.com/YOUR_USERNAME/LHArena.git
-cd LHArena
+git clone https://github.com/gtd138/QuantArenaOSS.git
+cd QuantArenaOSS
 ```
 
 **方式2：直接下载**
