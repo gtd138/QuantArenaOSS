@@ -117,21 +117,6 @@ cd QuantArenaOSS
 pip install -r requirements.txt
 ```
 
-**或使用虚拟环境（推荐）：**
-```bash
-# 创建虚拟环境
-python -m venv venv
-
-# 激活虚拟环境
-# Windows
-venv\Scripts\activate
-# Linux/macOS
-source venv/bin/activate
-
-# 安装依赖
-pip install -r requirements.txt
-```
-
 <details>
 <summary>📚 主要依赖包列表</summary>
 
@@ -595,8 +580,8 @@ AI Quantitative Trading Arena is an innovative multi-AI model competition platfo
 #### 2. Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/LHArena.git
-cd LHArena
+git clone https://github.com/gtd138/QuantArenaOSS.git
+cd QuantArenaOSS
 ```
 
 Or download and extract the source code directly.
