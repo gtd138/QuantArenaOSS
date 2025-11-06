@@ -29,11 +29,15 @@
   - [配置说明](#配置说明)
   - [项目结构](#项目结构)
   - [常见问题](#常见问题)
-- [English Version](#-english-version)
-  - [Introduction](#introduction)
-  - [Features](#features)
-  - [Quick Start](#quick-start-1)
-  - [Deployment](#deployment)
+- [English Version](#english)
+  - [Introduction](#-introduction)
+  - [Key Features](#-key-features)
+  - [Competing AI Models](#-competing-ai-models)
+  - [Quick Start](#-quick-start)
+  - [Project Structure](#-project-structure)
+  - [Usage](#-usage)
+  - [Configuration](#️-configuration)
+  - [Architecture](#-architecture)
 
 ---
 
