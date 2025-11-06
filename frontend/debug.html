@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>图表调试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        #chart { width: 800px; height: 400px; border: 1px solid #ccc; }
+        pre { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>图表调试工具</h1>
+    <button onclick="testChart()">测试图表</button>
+    <button onclick="fetchRealData()">获取真实数据</button>
+    <div id="chart"></div>
+    <h3>数据：</h3>
+    <pre id="dataDisplay"></pre>
+    <h3>日志：</h3>
+    <pre id="log"></pre>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let chart = null;
+        
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += msg + '\n';
+            console.log(msg);
+        }
+        
+        function testChart() {
+            log('测试图表渲染...');
+            
+            // 模拟数据
+            const testData = {
+                'DeepSeek-V3.2': {
+                    daily_assets: [
+                        { date: '20250102', total_assets: 9995 },
+                        { date: '20250103', total_assets: 9856 }
+                    ],
+                    model_color: '#3b82f6'
+                },
+                'Qwen3-Max': {
+                    daily_assets: [
+                        { date: '20250102', total_assets: 9995 },
+                        { date: '20250103', total_assets: 9868 }
+                    ],
+                    model_color: '#10b981'
+                }
+            };
+            
+            document.getElementById('dataDisplay').textContent = JSON.stringify(testData, null, 2);
+            renderChart(testData);
+        }
+        
+        async function fetchRealData() {
+            log('获取真实数据...');
+            try {
+                const response = await fetch(`${API_BASE}/api/arena/data`);
+                const data = await response.json();
+                log(`✅ 获取成功，模型数量: ${Object.keys(data).length}`);
+                
+                // 显示数据
+                document.getElementById('dataDisplay').textContent = JSON.stringify(data, null, 2);
+                
+                // 检查数据
+                for (const [name, modelData] of Object.entries(data)) {
+                    log(`${name}: ${modelData.daily_assets?.length || 0} 条daily_assets`);
+                }
+                
+                renderChart(data);
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`);
+            }
+        }
+        
+        function renderChart(data) {
+            log('渲染图表...');
+            
+            if (!chart) {
+                chart = echarts.init(document.getElementById('chart'));
+            }
+            
+            // 收集所有日期
+            const allDates = new Set();
+            for (const modelData of Object.values(data)) {
+                if (modelData.daily_assets) {
+                    modelData.daily_assets.forEach(d => allDates.add(d.date));
+                }
+            }
+            const dates = Array.from(allDates).sort();
+            log(`日期数量: ${dates.length}, 日期: ${dates.join(', ')}`);
+            
+            // 创建系列
+            const series = [];
+            for (const [name, modelData] of Object.entries(data)) {
+                if (!modelData.daily_assets || modelData.daily_assets.length === 0) {
+                    log(`⚠️ ${name} 没有daily_assets`);
+                    continue;
+                }
+                
+                // 创建日期映射
+                const dateMap = {};
+                modelData.daily_assets.forEach(d => {
+                    dateMap[d.date] = d.total_assets;
+                });
+                
+                // 构建数据点
+                const dataPoints = dates.map(date => dateMap[date] || null);
+                
+                series.push({
+                    name: name,
+                    type: 'line',
+                    data: dataPoints,
+                    smooth: true,
+                    lineStyle: { width: 2 },
+                    itemStyle: { color: modelData.model_color || '#000' }
+                });
+                
+                log(`✅ ${name}: ${dataPoints.length} 个数据点, 有效: ${dataPoints.filter(v => v !== null).length}`);
+            }
+            
+            if (series.length === 0) {
+                log('❌ 没有可显示的系列');
+                return;
+            }
+            
+            const option = {
+                title: { text: '资产曲线' },
+                tooltip: { trigger: 'axis' },
+                legend: { data: Object.keys(data) },
+                xAxis: {
+                    type: 'category',
+                    data: dates,
+                    axisLabel: {
+                        formatter: (value) => {
+                            return value.substr(4, 2) + '-' + value.substr(6, 2);
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    axisLabel: { formatter: '¥{value}' }
+                },
+                series: series
+            };
+            
+            chart.setOption(option);
+            log('✅ 图表渲染完成');
+        }
+        
+        // 页面加载时自动获取真实数据
+        window.onload = () => {
+            log('页面加载完成');
+            fetchRealData();
+        };
+    </script>
+</body>
+</html>

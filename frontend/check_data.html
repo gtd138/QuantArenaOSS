@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>前端数据检查</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f5f5f5; padding: 10px; white-space: pre-wrap; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>前端数据检查</h1>
+    <button onclick="checkData()">检查数据</button>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        async function checkData() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>正在检查...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/arena/data`);
+                const data = await response.json();
+                
+                let html = '<h2 class="success">✅ API响应成功</h2>';
+                html += `<p>模型数量: ${Object.keys(data).length}</p>`;
+                
+                // 检查每个模型
+                for (const [modelName, modelData] of Object.entries(data)) {
+                    html += `<h3>📊 ${modelName}</h3>`;
+                    html += `<ul>`;
+                    html += `<li>daily_assets: ${modelData.daily_assets?.length || 0} 条</li>`;
+                    html += `<li>trade_history: ${modelData.trade_history?.length || 0} 条</li>`;
+                    html += `<li>holdings: ${modelData.holdings?.length || 0} 条</li>`;
+                    html += `</ul>`;
+                    
+                    // 检查trade_history字段
+                    if (modelData.trade_history && modelData.trade_history.length > 0) {
+                        const firstTrade = modelData.trade_history[0];
+                        html += `<p><strong>第一条交易的字段：</strong></p>`;
+                        html += `<pre>${JSON.stringify(firstTrade, null, 2)}</pre>`;
+                        
+                        // 检查关键字段
+                        const hasDate = 'date' in firstTrade;
+                        const hasAction = 'action' in firstTrade;
+                        const hasStockCode = 'stock_code' in firstTrade;
+                        
+                        if (hasDate && hasAction && hasStockCode) {
+                            html += `<p class="success">✅ 交易记录字段完整！</p>`;
+                        } else {
+                            html += `<p class="error">❌ 交易记录字段缺失：</p>`;
+                            html += `<ul>`;
+                            if (!hasDate) html += `<li class="error">缺少 date 字段</li>`;
+                            if (!hasAction) html += `<li class="error">缺少 action 字段</li>`;
+                            if (!hasStockCode) html += `<li class="error">缺少 stock_code 字段</li>`;
+                            html += `</ul>`;
+                        }
+                        
+                        // 测试排序
+                        try {
+                            const trades = modelData.trade_history.slice();
+                            trades.sort((a, b) => b.date.localeCompare(a.date));
+                            html += `<p class="success">✅ 交易记录可以排序！</p>`;
+                            html += `<p>最新交易日期: ${trades[0].date}</p>`;
+                        } catch (e) {
+                            html += `<p class="error">❌ 排序失败: ${e.message}</p>`;
+                        }
+                        
+                        break; // 只检查第一个模型
+                    }
+                }
+                
+                result.innerHTML = html;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ 错误: ${error.message}</p>`;
+            }
+        }
+        
+        // 页面加载时自动检查
+        window.onload = checkData;
+    </script>
+</body>
+</html>

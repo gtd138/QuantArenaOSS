@@ -1,0 +1,25 @@
+# 核心依赖
+pandas>=2.0.0
+openai>=1.0.0
+baostock>=0.8.9
+akshare>=1.11.0  # A股新闻数据（免费，无需API key）
+
+# AI Agent
+langgraph>=0.0.1
+langchain>=0.1.0
+langchain-openai>=0.0.5
+
+# 数据库
+# sqlite3  # Python内置，无需安装
+
+# Web服务
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# 工具库
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# 开发依赖（可选）
+# pytest>=7.4.0
+# black>=23.0.0

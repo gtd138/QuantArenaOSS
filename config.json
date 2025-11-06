@@ -1,0 +1,103 @@
+{
+  "deepseek": {
+    "api_key": "YOUR_KEY",
+    "api_base": "https://api.deepseek.com/v1",
+    "model": "deepseek-chat",
+    "filter_model": "deepseek-chat"
+  },
+  "qwen": {
+    "api_key": "YOUR_KEY",
+    "api_base": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "model": "qwen3-max"
+  },
+  "glm": {
+    "api_key": "YOUR_KEY",
+    "api_base": "https://open.bigmodel.cn/api/paas/v4",
+    "model": "glm-4.6",
+    "enable_thinking": false
+  },
+  "kimi": {
+    "api_key": "YOUR_KEY",
+    "api_base": "https://api.moonshot.cn/v1",
+    "model": "kimi-k2-turbo-preview"
+  },
+  "doubao": {
+    "api_key": "YOUR_KEY",
+    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
+    "model": "doubao-seed-1-6-251015",
+    "enable_thinking": false
+  },
+  "stock_filter": {
+    "exclude_st": true,
+    "recommend_count": 100
+  },
+  "trading": {
+    "mode": "langgraph_agent",
+    "strategy": "short_term",
+    "start_date": "20250901",
+    "end_date": "20251231",
+    "initial_capital": 20000,
+    "max_holdings": 999,
+    "max_position_pct": 0.3,
+    "min_trade_amount": 50,
+    "stop_loss_pct": 0.05,
+    "stop_profit_pct": 0.15,
+    "target_hold_days": 5,
+    "max_hold_days": 365,
+    "ai_confidence_threshold": 0.20,
+    "analyze_stock_count": 50,
+    "commission_rate": 0.0003,
+    "min_commission": 5,
+    "stamp_tax": 0.001,
+    "enable_auto_optimize": true,
+    "max_price": 150,
+    "enable_reflection": true,
+    "reflection_interval": 5,
+    "min_cash_to_buy": 200
+  },
+  "arena": {
+    "enabled": true,
+    "models": [
+      {
+        "id": "deepseek",
+        "name": "DeepSeek-V3.2",
+        "provider": "deepseek",
+        "enabled": true,
+        "color": "#1890ff",
+        "logo": "resources/deepseek_logo_02.png"
+      },
+      {
+        "id": "qwen",
+        "name": "Qwen3-Max",
+        "provider": "qwen",
+        "enabled": true,
+        "color": "#9c27b0",
+        "logo": "resources/qwen_logo_02.png"
+      },
+      {
+        "id": "glm",
+        "name": "glm-4.6",
+        "provider": "glm",
+        "enabled": true,
+        "color": "#2E8B57",
+        "logo": "resources/glm_logo_01.png"
+      },
+      {
+        "id": "kimi",
+        "name": "Kimi-K2",
+        "provider": "kimi",
+        "enabled": true,
+        "color": "#000000",
+        "logo": "resources/kimi_logo_01.png"
+      },
+      {
+        "id": "doubao",
+        "name": "Doubao-1.6",
+        "provider": "doubao",
+        "enabled": true,
+        "color": "#FF6B35",
+        "logo": "resources/doubao_logo_01.png"
+      }
+    ]
+  }
+}

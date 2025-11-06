@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-card {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.ok {
+            background: #4caf50;
+            color: white;
+        }
+        .status.error {
+            background: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 LHArena API 测试页面</h1>
+    
+    <div class="test-card">
+        <h2>📋 测试清单</h2>
+        <div id="checklist"></div>
+    </div>
+    
+    <div class="test-card">
+        <h2>📊 /api/arena/data</h2>
+        <div id="data-status"></div>
+        <pre id="data-result"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2>⏱️ /api/arena/progress</h2>
+        <div id="progress-status"></div>
+        <pre id="progress-result"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2>🏆 /api/arena/rankings</h2>
+        <div id="rankings-status"></div>
+        <pre id="rankings-result"></pre>
+    </div>
+    
+    <div class="test-card">
+        <h2>⚙️ /api/arena/config</h2>
+        <div id="config-status"></div>
+        <pre id="config-result"></pre>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        async function testAPI(endpoint, resultId, statusId) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                const data = await response.json();
+                
+                document.getElementById(statusId).innerHTML = `<span class="status ok">✅ 成功</span> (${response.status})`;
+                document.getElementById(resultId).textContent = JSON.stringify(data, null, 2);
+                
+                return {success: true, data};
+            } catch (error) {
+                document.getElementById(statusId).innerHTML = `<span class="status error">❌ 失败</span>`;
+                document.getElementById(resultId).textContent = error.message;
+                
+                return {success: false, error: error.message};
+            }
+        }
+        
+        async function runTests() {
+            console.log('🧪 开始测试API...');
+            
+            const tests = [
+                {name: 'Config API', endpoint: '/api/arena/config', result: 'config-result', status: 'config-status'},
+                {name: 'Progress API', endpoint: '/api/arena/progress', result: 'progress-result', status: 'progress-status'},
+                {name: 'Data API', endpoint: '/api/arena/data', result: 'data-result', status: 'data-status'},
+                {name: 'Rankings API', endpoint: '/api/arena/rankings', result: 'rankings-result', status: 'rankings-status'}
+            ];
+            
+            const results = [];
+            
+            for (const test of tests) {
+                const result = await testAPI(test.endpoint, test.result, test.status);
+                results.push({...test, ...result});
+            }
+            
+            // 显示检查清单
+            const checklist = document.getElementById('checklist');
+            let html = '<ul style="list-style: none; padding: 0;">';
+            results.forEach(r => {
+                const icon = r.success ? '✅' : '❌';
+                html += `<li style="padding: 8px 0;">${icon} ${r.name}: <strong>${r.success ? '正常' : '失败'}</strong></li>`;
+            });
+            html += '</ul>';
+            
+            checklist.innerHTML = html;
+            
+            console.log('✅ 测试完成', results);
+        }
+        
+        // 页面加载后自动测试
+        window.onload = () => {
+            runTests();
+            
+            // 每10秒自动刷新
+            setInterval(runTests, 10000);
+        };
+    </script>
+</body>
+</html>
+

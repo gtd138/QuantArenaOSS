@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>API测试</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>API数据测试</h1>
+    <button onclick="testAPI()">获取数据</button>
+    <div id="result"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        
+        async function testAPI() {
+            const result = document.getElementById('result');
+            result.innerHTML = '<p>正在获取数据...</p>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/arena/data`);
+                const data = await response.json();
+                
+                result.innerHTML = '<p class="success">✅ 数据获取成功！</p>';
+                
+                // 显示统计
+                const stats = [];
+                for (const [modelName, modelData] of Object.entries(data)) {
+                    const dailyCount = modelData.daily_assets ? modelData.daily_assets.length : 0;
+                    const holdingsCount = modelData.holdings ? modelData.holdings.length : 0;
+                    const tradesCount = modelData.trade_history ? modelData.trade_history.length : 0;
+                    
+                    stats.push(`
+                        <h3>${modelName}</h3>
+                        <ul>
+                            <li>总资产: ¥${modelData.total_assets?.toFixed(2)}</li>
+                            <li>现金: ¥${modelData.cash?.toFixed(2)}</li>
+                            <li>收益率: ${modelData.profit_pct?.toFixed(2)}%</li>
+                            <li>📈 daily_assets: ${dailyCount} 条</li>
+                            <li>💼 holdings: ${holdingsCount} 条</li>
+                            <li>📝 trade_history: ${tradesCount} 条</li>
+                        </ul>
+                    `);
+                    
+                    if (dailyCount > 0) {
+                        stats.push(`<p>daily_assets数据:</p><pre>${JSON.stringify(modelData.daily_assets, null, 2)}</pre>`);
+                    }
+                }
+                
+                result.innerHTML += stats.join('');
+                result.innerHTML += `<h3>完整数据:</h3><pre>${JSON.stringify(data, null, 2)}</pre>`;
+                
+            } catch (error) {
+                result.innerHTML = `<p class="error">❌ 获取数据失败: ${error.message}</p>`;
+                console.error(error);
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.onload = testAPI;
+    </script>
+</body>
+</html>

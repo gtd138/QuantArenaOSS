@@ -1,0 +1,2055 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 AI量化竞技场</title>
+    <link rel="icon" href="data:,">
+    
+    <!-- ECharts -->
+    <script src="echarts.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="tailwindcss-play.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .model-card {
+            border-left: 4px solid;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+        .model-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .right-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 450px;
+            height: 100vh;
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+        .right-panel::-webkit-scrollbar {
+            display: none;
+        }
+        .main-content {
+            margin-right: 450px;
+        }
+        .log-entry {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .log-info { background: #f0f9ff; color: #0369a1; }
+        .log-trade { background: #f0fdf4; color: #15803d; }
+        .log-warning { background: #fef9c3; color: #ca8a04; }
+        .tab-btn {
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-btn:hover {
+            color: #2563eb;
+        }
+        .tab-btn.active {
+            color: #2563eb;
+            border-bottom-color: #2563eb;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content:not(.hidden) {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- 主内容区 -->
+    <div class="main-content">
+        <div class="px-6 pb-6">
+            <!-- 顶部标题栏 -->
+            <div class="bg-blue-600 text-white rounded-lg p-4 mb-4 flex justify-between items-center">
+                <h1 class="text-2xl font-bold">🏆 AI量化竞技场</h1>
+                <div class="flex items-center gap-8">
+                    <div id="startDate" class="text-lg">开始日期: 2025-01-01</div>
+                    <div id="initialCapital" class="text-lg">初始资金: ¥10,000.00</div>
+                </div>
+            </div>
+            
+            <!-- 进度条（已隐藏） -->
+            <div class="card" style="display: none;">
+                <div class="flex justify-between mb-2">
+                    <span id="progressText" class="text-gray-700">等待开始...</span>
+                    <span id="progressPercent" class="text-gray-700">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- 资产卡片 -->
+            <div id="assetCards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-3">
+                <!-- 动态生成 -->
+            </div>
+            
+            <!-- 资金曲线图 -->
+            <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">📈 资金曲线</h2>
+                    <button id="replayBtn" onclick="toggleReplay()" 
+                            class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium">
+                        ⏯️ 回放
+                    </button>
+                </div>
+                <div id="chart" style="width: 100%; height: 500px;"></div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- 右侧面板：排名 + Tab内容 -->
+    <div class="right-panel">
+        <!-- 排名榜已合并到左侧模型卡片 -->
+        
+        <!-- Tab标签页 -->
+        <div class="flex flex-col" style="flex: 1; overflow: hidden;">
+            <!-- Tab导航 -->
+            <div class="flex border-b border-gray-200 px-6 pt-6">
+                <button class="tab-btn active px-4 py-2 font-bold" onclick="switchTab('ai')">💭 AI思考</button>
+                <button class="tab-btn px-4 py-2 font-bold" onclick="switchTab('trades')">📋 交易记录</button>
+                <button class="tab-btn px-4 py-2 font-bold" onclick="switchTab('holdings')">💼 持仓</button>
+            </div>
+            
+            <!-- Tab内容（自动填充高度） -->
+            <div id="tab-ai" class="tab-content px-6 pb-6" style="flex: 1; overflow-y: auto;">
+                <div id="aiLogs">
+                    <div class="text-center text-gray-400 py-8">等待AI开始思考...</div>
+                </div>
+            </div>
+            
+            <div id="tab-trades" class="tab-content px-6 pb-6" style="display: none; flex: 1; overflow-y: auto;">
+                <div id="tradesTableRight">
+                    <div class="text-center text-gray-400 text-xs py-4">暂无交易记录</div>
+                </div>
+            </div>
+            
+            <div id="tab-holdings" class="tab-content px-6 pb-6" style="display: none; flex: 1; overflow-y: auto;">
+                <div id="holdingsTableRight">
+                    <div class="text-center text-gray-400 text-xs py-4">暂无持仓</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // API基础URL
+        const API_BASE = window.API_BASE || `${window.location.protocol}//${window.location.hostname}:8000`;
+        
+        // ECharts实例
+        let chart = null;
+        let config = null;
+        let lastLogCount = 0;  // 用于增量更新日志（已废弃）
+        let lastLogsHash = '';  // 用于判断日志内容是否变化
+        
+        // 警告去重：记录已经警告过的模型，避免重复警告
+        const warnedModels = new Set();
+        
+        // 回放相关变量
+        let replayState = {
+            isPlaying: false,
+            currentIndex: 0,
+            fullData: null,  // 完整历史数据
+            allDates: [],    // 所有日期
+            fixedAxisConfig: null,  // 回放时使用的坐标轴配置
+            savedAxisConfig: null,  // 保存的当前视图坐标轴配置
+            intervalId: null,
+            normalUpdateIntervalId: null,  // 保存正常更新的intervalId
+            totalDuration: 15000,  // 固定总时长15秒
+            interpolationSteps: 10,  // 每两天之间插值10帧（流畅度）
+            speed: 100,  // 动态计算：总时长 / (总天数 * 插值步数)
+            currentSubStep: 0,  // 当前子步骤
+            isReplayMode: false,  // 是否处于回放模式（用于隐藏波纹）
+            needCatchUpAnimation: false,  // 回放结束后是否需要追赶动画
+            justFinishedReplay: false  // 刚结束回放（用于只添加波纹，不重建曲线）
+        };
+        
+        // 初始化
+        async function init() {
+            // 加载配置
+            const configRes = await fetch(`${API_BASE}/api/arena/config`);
+            config = await configRes.json();
+
+            if (!config || typeof config !== 'object') {
+                config = {};
+            }
+
+            // ✅ 防御：即使后端缺字段也提供默认值
+            if (config.initial_capital === undefined || config.initial_capital === null) {
+                config.initial_capital = 10000;
+            }
+            if (!config.start_date) {
+                config.start_date = '20250101';
+            }
+            if (!Array.isArray(config.models)) {
+                config.models = [];
+            }
+
+            // 更新初始资金和开始日期
+            const capitalValue = Number(config.initial_capital) || 10000;
+            document.getElementById('initialCapital').textContent = 
+                `初始资金: ¥${capitalValue.toLocaleString()}.00`;
+
+            // 格式化并显示开始日期（从 config.json 读取）
+            const startDate = config.start_date || '20250101';
+            const formattedStartDate = `${startDate.substr(0,4)}-${startDate.substr(4,2)}-${startDate.substr(6,2)}`;
+            document.getElementById('startDate').textContent = `开始日期: ${formattedStartDate}`;
+            
+            // 初始化图表
+            chart = echarts.init(document.getElementById('chart'));
+            
+            // 生成资产卡片
+            generateAssetCards();
+            
+            // 开始定时刷新
+            startPolling();
+        }
+        
+        // 生成资产卡片
+        // 当前高亮的模型
+        let highlightedModel = null;
+        
+        function generateAssetCards() {
+            // ✅ 初始占位卡片（数据加载后会由updateAssetCards重新生成并排序）
+            const container = document.getElementById('assetCards');
+            container.innerHTML = config.models.map((model) => `
+                <div class="card model-card" 
+                     style="border-left-color: ${model.color}"
+                     data-model-name="${model.name}"
+                     data-series-index="${model.index}"
+                     onclick="toggleModelHighlight('${model.name}', ${model.index})">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            ${model.logo ? `<img src="${model.logo}" class="w-7 h-7 mr-1.5" />` : ''}
+                            <h3 class="text-base font-bold truncate">${model.name}</h3>
+                        </div>
+                        <span class="text-lg font-bold text-gray-400">-</span>
+                    </div>
+                    <div class="text-xl font-bold text-gray-800 mb-1">
+                        ¥10,000.00
+                    </div>
+                    <div class="text-sm font-medium text-gray-600 mb-1">
+                        0.00%
+                    </div>
+                    <div class="text-sm font-medium text-gray-600">
+                        💰 可用: ¥10,000.00
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 切换模型高亮
+        function toggleModelHighlight(modelName, cardIndex) {
+            const option = chart.getOption();
+            
+            // 通过name查找实际的seriesIndex（因为有filter操作，cardIndex可能不准确）
+            const seriesIndex = option.series.findIndex(s => s.name === modelName);
+            if (seriesIndex === -1) return;  // 未找到对应series
+            
+            if (highlightedModel === modelName) {
+                // 取消高亮 - 恢复所有曲线和图标
+                option.series.forEach((s, idx) => {
+                    if (s.name !== '初始资金' && !s.name.includes('_ripple')) {
+                        s.lineStyle = {
+                            ...s.lineStyle,
+                            width: 2,
+                            opacity: 1
+                        };
+                        // 恢复markPoint图标透明度
+                        if (s.markPoint && s.markPoint.data) {
+                            s.markPoint.data.forEach(point => {
+                                if (point.itemStyle) {
+                                    point.itemStyle.opacity = 1;
+                                }
+                            });
+                        }
+                    }
+                });
+                chart.setOption(option, { notMerge: false, lazyUpdate: true, silent: true });
+                highlightedModel = null;
+                
+                // 移除卡片高亮样式
+                document.querySelectorAll('.model-card').forEach(card => {
+                    card.style.opacity = '1';
+                    card.style.transform = 'scale(1)';
+                });
+            } else {
+                // 高亮选中的曲线和图标，其他变淡
+                option.series.forEach((s, idx) => {
+                    if (s.name !== '初始资金' && !s.name.includes('_ripple')) {
+                        if (idx === seriesIndex) {
+                            // 点击的曲线：加粗，不透明
+                            s.lineStyle = {
+                                ...s.lineStyle,
+                                width: 4,
+                                opacity: 1
+                            };
+                            // markPoint图标保持不透明
+                            if (s.markPoint && s.markPoint.data) {
+                                s.markPoint.data.forEach(point => {
+                                    if (point.itemStyle) {
+                                        point.itemStyle.opacity = 1;
+                                    }
+                                });
+                            }
+                        } else {
+                            // 其他曲线：正常粗细，变透明
+                            s.lineStyle = {
+                                ...s.lineStyle,
+                                width: 2,
+                                opacity: 0.3
+                            };
+                            // markPoint图标也变淡
+                            if (s.markPoint && s.markPoint.data) {
+                                s.markPoint.data.forEach(point => {
+                                    if (point.itemStyle) {
+                                        point.itemStyle.opacity = 0.3;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+                chart.setOption(option, { notMerge: false, lazyUpdate: true, silent: true });
+                highlightedModel = modelName;
+                
+                // 更新卡片视觉效果
+                document.querySelectorAll('.model-card').forEach(card => {
+                    if (card.dataset.modelName === modelName) {
+                        card.style.opacity = '1';
+                        card.style.transform = 'scale(1.05)';
+                    } else {
+                        card.style.opacity = '0.5';
+                        card.style.transform = 'scale(1)';
+                    }
+                });
+            }
+        }
+        
+        // 更新UI
+        async function updateUI() {
+            try {
+                // 获取数据
+                const [dataRes, progressRes, rankingsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/arena/data`),
+                    fetch(`${API_BASE}/api/arena/progress`),
+                    fetch(`${API_BASE}/api/arena/rankings`)
+                ]);
+                
+                const data = await dataRes.json();
+                const progress = await progressRes.json();
+                const rankings = await rankingsRes.json();
+                
+                // 🔍 调试：打印数据
+                console.log('📊 updateUI 获取到数据:', {
+                    models: Object.keys(data),
+                    modelCount: Object.keys(data).length,
+                    progress: progress.percent + '%',
+                    timestamp: new Date().toLocaleTimeString()
+                });
+                
+                // 更新进度
+                updateProgress(progress);
+                updateAssetCards(data);
+                updateChart(data);
+                // updateRankings(rankings.rankings);  // 已合并到卡片
+                updateTradesTable(data);
+                updateHoldingsTable(data);
+                
+                // 更新AI日志（增量）
+                await updateAILogs();
+                
+            } catch (error) {
+                console.error('更新UI失败:', error);
+            }
+        }
+        
+        // 更新进度
+        function updateProgress(progress) {
+            // ✅ 只在回放模式下显示进度条（正常模式不需要进度条）
+            if (!replayState.isPlaying) {
+                return;  // 正常模式不更新进度条
+            }
+            
+            document.getElementById('progressText').textContent = progress.message || '等待开始...';
+            document.getElementById('progressPercent').textContent = `${progress.percent}%`;
+            document.getElementById('progressBar').style.width = `${progress.percent}%`;
+        }
+        
+        // 更新资产卡片（按排名排序）
+        function updateAssetCards(data) {
+            // ✅ 判断是否已经开始：检查是否有交易记录或资产变化
+            let hasStarted = false;
+            const initialCapital = config.initial_capital || 10000; // 从配置获取
+            
+            // 检查是否有任何模型的交易记录或资产变化
+            for (const model of config.models) {
+                const modelData = data[model.id];
+                if (!modelData) continue;
+                
+                // 检查是否有交易记录
+                const trades = modelData.trades || [];
+                if (trades.length > 0) {
+                    hasStarted = true;
+                    break;
+                }
+                
+                // 检查是否有daily_assets数据且不是初始值（有多个数据点或资产有变化）
+                const dailyAssets = modelData.daily_assets || [];
+                if (dailyAssets.length > 1) {
+                    hasStarted = true;
+                    break;
+                }
+                if (dailyAssets.length === 1) {
+                    const assets = dailyAssets[0].total_assets;
+                    if (assets !== initialCapital) {
+                        hasStarted = true;
+                        break;
+                    }
+                }
+            }
+            
+            // ✅ 创建模型数据数组，使用daily_assets的最新值
+            const modelDataArray = config.models.map(model => {
+                const modelData = data[model.id];  // ✅ 使用id而不是name
+                if (!modelData) return null;
+                
+                // ✅ 使用daily_assets的最新值作为total_assets（与图表保持一致）
+                const dailyAssets = modelData.daily_assets || [];
+                if (dailyAssets.length > 0) {
+                    const latestAssets = dailyAssets[dailyAssets.length - 1].total_assets;
+                    return {
+                        ...model,
+                        data: {
+                            ...modelData,
+                            total_assets: latestAssets,  // 使用最新值
+                            profit_pct: ((latestAssets - initialCapital) / initialCapital) * 100
+                        }
+                    };
+                }
+                return { ...model, data: modelData };
+            }).filter(m => m && m.data)  // 过滤掉没有数据的模型
+              .sort((a, b) => (b.data.profit_pct || 0) - (a.data.profit_pct || 0));  // 按收益率降序
+            
+            // ✅ 重新生成卡片HTML（按排名顺序，但未开始时不显示排名）
+            const container = document.getElementById('assetCards');
+            container.innerHTML = modelDataArray.map((model, idx) => {
+                const modelData = model.data;
+                const profitPct = modelData.profit_pct;
+                const rank = idx + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`;
+                
+                return `
+                    <div class="card model-card" 
+                         style="border-left-color: ${model.color}"
+                         data-model-name="${model.name}"
+                         data-series-index="${model.index}"
+                         onclick="toggleModelHighlight('${model.name}', ${model.index})">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                ${model.logo ? `<img src="${model.logo}" class="w-7 h-7 mr-1.5" />` : ''}
+                                <h3 class="text-base font-bold truncate">${model.name}</h3>
+                            </div>
+                            ${hasStarted ? `<span class="text-lg font-bold">${medal}</span>` : ''}
+                        </div>
+                        <div class="text-xl font-bold text-gray-800 mb-1">
+                            ¥${modelData.total_assets.toLocaleString()}
+                        </div>
+                        <div class="text-sm font-medium ${profitPct >= 0 ? 'text-red-600' : 'text-green-600'} mb-1">
+                            ${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%
+                        </div>
+                        <div class="text-sm font-medium text-gray-600">
+                            💰 可用: ¥${(modelData.cash || 0).toLocaleString()}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // 更新图表（使用坐标对，避免数据错位）
+        function updateChart(data) {
+            // ✅ 回放时使用固定的完整日期列表，正常模式动态计算
+            let allDates;
+            if (replayState.isPlaying && replayState.allDates && replayState.allDates.length > 0) {
+                // 回放模式：使用固定的完整日期列表（横轴不变）
+                allDates = replayState.allDates;
+            } else {
+                // ✅ 正常模式：同步显示逻辑 - 只显示到所有模型都有的最新日期
+                // 前端可以从后端获取所有数据（包括未来的），但显示时只显示到同步日期
+                // 这样落后的模型可以等待，确保所有模型齐头并进
+                // 1. 先找出每个模型最新日期的集合
+                const modelLatestDates = [];
+                const modelDateMap = {}; // {modelId: latestDate}
+                config.models.forEach(model => {
+                    const modelData = data[model.id];
+                    if (modelData && modelData.daily_assets && modelData.daily_assets.length > 0) {
+                        // 获取该模型最新的日期
+                        const latestDate = modelData.daily_assets[modelData.daily_assets.length - 1].date;
+                        modelLatestDates.push(latestDate);
+                        modelDateMap[model.id] = latestDate;
+                    }
+                });
+                
+                // 2. ✅ 新逻辑：允许Agent最多领先2天，但只要有当天的结果就显示
+                // 计算同步日期 = min(最慢日期 + 2天, 最快日期)
+                let syncDate = null;
+                if (modelLatestDates.length === config.models.length) {
+                    // 所有模型都有数据
+                    const sortedDates = modelLatestDates.sort((a, b) => {
+                        const dateA = new Date(a.substr(0,4), a.substr(4,2)-1, a.substr(6,2));
+                        const dateB = new Date(b.substr(0,4), b.substr(4,2)-1, b.substr(6,2));
+                        return dateA - dateB;
+                    });
+                    
+                    const minDate = sortedDates[0];  // 最慢的模型
+                    const maxDate = sortedDates[sortedDates.length - 1];  // 最快的模型
+                    
+                    // 辅助函数：日期字符串加N天
+                    function addDays(dateStr, days) {
+                        const year = parseInt(dateStr.substr(0, 4));
+                        const month = parseInt(dateStr.substr(4, 2)) - 1;
+                        const day = parseInt(dateStr.substr(6, 2));
+                        const date = new Date(year, month, day);
+                        date.setDate(date.getDate() + days);
+                        const y = date.getFullYear();
+                        const m = String(date.getMonth() + 1).padStart(2, '0');
+                        const d = String(date.getDate()).padStart(2, '0');
+                        return y + m + d;
+                    }
+                    
+                    // 计算日期差（天数）
+                    function daysBetween(dateStr1, dateStr2) {
+                        const d1 = new Date(parseInt(dateStr1.substr(0,4)), parseInt(dateStr1.substr(4,2))-1, parseInt(dateStr1.substr(6,2)));
+                        const d2 = new Date(parseInt(dateStr2.substr(0,4)), parseInt(dateStr2.substr(4,2))-1, parseInt(dateStr2.substr(6,2)));
+                        const diffTime = Math.abs(d2 - d1);
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                        return diffDays;
+                    }
+                    
+                    const daysDiff = daysBetween(minDate, maxDate);
+                    
+                    if (daysDiff <= 2) {
+                        // 如果差距<=2天，允许显示所有当天的结果（显示到最快日期）
+                        syncDate = maxDate;
+                    } else {
+                        // 如果差距>2天，限制只显示到最慢+2天（不允许超过2天）
+                        syncDate = addDays(minDate, 2);
+                    }
+                    
+                    // 🔍 调试信息
+                    if (daysDiff > 0) {
+                        console.log(`✅ 同步显示: 日期差距${daysDiff}天（最慢: ${minDate}, 最快: ${maxDate}, 显示到: ${syncDate}）`);
+                    }
+                } else {
+                    // 有些模型还没有数据，等待所有模型都有数据
+                    syncDate = null;
+                }
+                
+                // 3. 收集日期：只收集到同步日期为止的日期
+                const allDatesSet = new Set();
+                if (syncDate) {
+                    // 收集所有模型在同步日期之前（含）的所有日期
+                Object.values(data).forEach(modelData => {
+                    if (modelData.daily_assets) {
+                        modelData.daily_assets.forEach(d => {
+                                const dateNum = parseInt(d.date);
+                                const syncDateNum = parseInt(syncDate);
+                                if (dateNum <= syncDateNum) {
+                            allDatesSet.add(d.date);
+                                }
+                        });
+                    }
+                });
+                } else if (modelLatestDates.length > 0) {
+                    // 部分模型有数据但未全部同步：显示已有数据（向后兼容）
+                    Object.values(data).forEach(modelData => {
+                        if (modelData.daily_assets) {
+                            modelData.daily_assets.forEach(d => {
+                                allDatesSet.add(d.date);
+                            });
+                        }
+                    });
+                }
+                
+                allDates = Array.from(allDatesSet).sort((a, b) => {
+                    // 按日期值排序，而不是字符串字典序
+                    const dateA = new Date(a.substr(0,4), a.substr(4,2)-1, a.substr(6,2));
+                    const dateB = new Date(b.substr(0,4), b.substr(4,2)-1, b.substr(6,2));
+                    return dateA - dateB;
+                });
+            }
+            
+            // ✅ 在末尾添加3个空白日期（用于右侧留白）- 仅正常模式需要
+            if (!replayState.isPlaying && allDates.length > 0) {
+                const lastDate = allDates[allDates.length - 1];
+                const year = parseInt(lastDate.substr(0, 4));
+                const month = parseInt(lastDate.substr(4, 2));
+                const day = parseInt(lastDate.substr(6, 2));
+                
+                for (let i = 1; i <= 3; i++) {
+                    const nextDate = new Date(year, month - 1, day + i);
+                    const nextDateStr = `${nextDate.getFullYear()}${String(nextDate.getMonth() + 1).padStart(2, '0')}${String(nextDate.getDate()).padStart(2, '0')}`;
+                    allDates.push(nextDateStr);
+                }
+            }
+            
+            const series = config.models.map(model => {
+                const modelData = data[model.id];  // ✅ 使用id而不是name
+                if (!modelData || !modelData.daily_assets) {
+                    // 使用 debug 级别，不会在控制台默认显示（需要开启详细日志）
+                    if (!warnedModels.has(model.id + '_empty')) {
+                        console.debug(`[DEBUG] updateChart: 模型 ${model.name} 的数据为空`, modelData);
+                        warnedModels.add(model.id + '_empty');
+                    }
+                    return null;
+                }
+                if (modelData.daily_assets.length === 0) {
+                    // 使用 debug 级别，不会在控制台默认显示（需要开启详细日志）
+                    if (!warnedModels.has(model.id + '_empty_array')) {
+                        console.debug(`[DEBUG] updateChart: 模型 ${model.name} 的 daily_assets 为空数组`);
+                        warnedModels.add(model.id + '_empty_array');
+                    }
+                    return null;
+                }
+                
+                // ✅ 如果模型有数据了，清除之前的警告记录（允许重新警告如果数据再次变空）
+                if (modelData.daily_assets.length > 0) {
+                    warnedModels.delete(model.id + '_empty');
+                    warnedModels.delete(model.id + '_empty_array');
+                }
+                
+                // 创建日期到资产的映射
+                const dateMap = {};
+                modelData.daily_assets.forEach(d => {
+                    if (d && d.date) {  // 确保d不是null且有date字段
+                        dateMap[d.date] = d.total_assets;
+                    }
+                });
+                
+                // 按所有日期构建数据（没有数据的日期用null）
+                const dataPoints = allDates.map(date => dateMap[date] !== undefined ? dateMap[date] : null);
+
+                // 找到该模型最后一条有效数据的索引
+                const lastDataDate = modelData.daily_assets.length > 0
+                    ? modelData.daily_assets[modelData.daily_assets.length - 1].date
+                    : null;
+                const lastDataIndex = lastDataDate ? allDates.indexOf(lastDataDate) : -1;
+
+                if (lastDataIndex >= 0) {
+                    // ✅ 仅在有效数据范围内填充null，避免在右侧留白区域画线
+                    let hasStarted = false; // 是否已经有过数据
+                    let lastValidValue = null;
+
+                    for (let i = 0; i <= lastDataIndex; i++) {
+                        if (dataPoints[i] !== null) {
+                            hasStarted = true;
+                            lastValidValue = dataPoints[i];
+                        } else if (hasStarted && lastValidValue !== null) {
+                            // 只在"已经有过数据"后才填充null（保持水平线）
+                            dataPoints[i] = lastValidValue;
+                        }
+                        // else: 开头的null保持null（不画线）
+                    }
+
+                    // ✅ 动态填充null值（线性插值），仅处理有效数据范围
+                    for (let i = 0; i <= lastDataIndex; i++) {
+                        if (dataPoints[i] === null) {
+                            // 找到前一个非null值
+                            let prevValue = null;
+                            let prevIndex = -1;
+                            for (let j = i - 1; j >= 0; j--) {
+                                if (dataPoints[j] !== null) {
+                                    prevValue = dataPoints[j];
+                                    prevIndex = j;
+                                    break;
+                                }
+                            }
+
+                            // 找到后一个非null值（限制在有效范围内）
+                            let nextValue = null;
+                            let nextIndex = -1;
+                            for (let j = i + 1; j <= lastDataIndex; j++) {
+                                if (dataPoints[j] !== null) {
+                                    nextValue = dataPoints[j];
+                                    nextIndex = j;
+                                    break;
+                                }
+                            }
+
+                            // 线性插值填充
+                            if (prevValue !== null && nextValue !== null && nextIndex > prevIndex) {
+                                const ratio = (i - prevIndex) / (nextIndex - prevIndex);
+                                dataPoints[i] = prevValue + (nextValue - prevValue) * ratio;
+                            } else if (prevValue !== null) {
+                                // 只有前值，保持不变
+                                dataPoints[i] = prevValue;
+                            } else if (nextValue !== null) {
+                                // 只有后值，使用后值
+                                dataPoints[i] = nextValue;
+                            }
+                        }
+                    }
+                }
+                
+                // ✅ 截断数据到最后一个有效数据点，避免回退后线延伸到未来
+                if (lastDataIndex >= 0 && lastDataIndex < dataPoints.length - 1) {
+                    dataPoints.splice(lastDataIndex + 1);
+                }
+                
+                // 获取最新资产和日期索引
+                const latestAssets = modelData.daily_assets.length > 0 ? 
+                    modelData.daily_assets[modelData.daily_assets.length - 1].total_assets : 0;
+                
+                // ✅ 截断后，latestDateIndex 就是 dataPoints 的最后一个索引
+                let latestDateIndex = lastDataIndex >= 0 ? lastDataIndex : -1;
+                
+                // 容错：如果 lastDataIndex 无效，fallback 到最后一个有数据的索引
+                if (latestDateIndex === -1 && dataPoints.length > 0) {
+                    // 找到最后一个有数据的日期索引
+                    for (let i = dataPoints.length - 1; i >= 0; i--) {
+                        if (dataPoints[i] !== null) {
+                            latestDateIndex = i;
+                            console.log(`✅ ${model.name}: fallback到索引 ${i}`);
+                            break;
+                        }
+                    }
+                }
+                
+                // 最终fallback：如果还是-1，使用最后一个索引
+                if (latestDateIndex === -1 && dataPoints.length > 0) {
+                    latestDateIndex = dataPoints.length - 1;
+                    console.warn(`⚠️ ${model.name}: 强制fallback到索引 ${latestDateIndex}`);
+                }
+                
+                // 验证索引有效性（防止超出横轴范围）
+                const maxValidIndex = allDates.length - 1;
+                if (latestDateIndex > maxValidIndex) {
+                    console.error(`❌ ${model.name}: latestDateIndex(${latestDateIndex})超出范围(${maxValidIndex})，修正为${maxValidIndex}`);
+                    latestDateIndex = maxValidIndex;
+                }
+                
+                // console.log(`📊 ${model.name}: latestDateIndex=${latestDateIndex}, latestAssets=${latestAssets}`);
+                
+                return {
+                    name: model.name,
+                    type: 'line',
+                    data: dataPoints,
+                    itemStyle: { 
+                        color: model.color,
+                        opacity: 0,  // symbol透明不可见
+                        borderWidth: 0
+                    },
+                    lineStyle: { 
+                        width: 2, 
+                        color: model.color,
+                        cap: 'round',
+                        join: 'round'
+                    },
+                    smooth: true,
+                    animation: true,  // 始终启用动画（由全局option控制时长）
+                    symbol: 'circle',
+                    symbolSize: 32,  // 大幅增加到32px让整条线都可以捕获
+                    showSymbol: true,  // 显示透明symbol增加捕获面积
+                    sampling: 'lttb',  // 优化采样
+                    zlevel: 0,
+                    z: 1,
+                    emphasis: {
+                        disabled: true  // 完全禁用自动emphasis
+                    },
+                    // 标记点显示末端图标和标签
+                    markPoint: latestDateIndex >= 0 ? {
+                        silent: false,  // 允许接收鼠标事件
+                        animation: false,  // 完全禁用动画，靠插值控制
+                        animationDuration: 0,
+                        animationDurationUpdate: 0,
+                        emphasis: {
+                            scale: 1.2  // 悬停时放大
+                        },
+                        data: [
+                            // 图标
+                            {
+                                xAxis: latestDateIndex,
+                                yAxis: latestAssets,
+                                symbol: model.logo ? `image://${model.logo}` : 'circle',
+                                symbolSize: model.logo ? [32, 32] : 30,
+                                symbolOffset: [0, 0],
+                                z: 999,  // 单独设置z层级，确保在最上层
+                                itemStyle: {
+                                    color: model.logo ? 'transparent' : model.color,
+                                    borderColor: model.color,
+                                    borderWidth: 3
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        borderWidth: 4,  // 边框加粗
+                                        shadowBlur: 10,
+                                        shadowColor: model.color
+                                    }
+                                },
+                                label: {
+                                    show: false
+                                }
+                            },
+                            // 金额标签（长方形）
+                            {
+                                xAxis: latestDateIndex,
+                                yAxis: latestAssets,
+                                symbol: 'rect',
+                                symbolSize: [110, 26],
+                                symbolOffset: [75, 0],  // 与图标保持10px间距
+                                z: 999,  // 单独设置z层级
+                                itemStyle: {
+                                    color: model.color,
+                                    borderWidth: 0,
+                                    borderRadius: 0
+                                },
+                                emphasis: {
+                                    itemStyle: {
+                                        shadowBlur: 8,
+                                        shadowColor: model.color
+                                    },
+                                    label: {
+                                        fontSize: 13  // 字体稍微变大
+                                    }
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: `¥${latestAssets.toLocaleString()}`,
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    fontWeight: 'bold',
+                                    padding: [2, 8]
+                                }
+                            }
+                        ]
+                    } : undefined
+                };
+            }).filter(s => s !== null);
+            
+            // 调试：检查series的markPoint配置（已注释，生产环境不需要）
+            // console.log(`🔍 过滤后的series数量: ${series.length}`);
+            // series.forEach((s, i) => {
+            //     if (s.markPoint) {
+            //         console.log(`  ✅ Series ${i} (${s.name}): 有markPoint, 数据点数=${s.markPoint.data?.length || 0}`);
+            //     } else {
+            //         console.log(`  ❌ Series ${i} (${s.name}): 没有markPoint`);
+            //     }
+            // });
+            
+            // ✅ 回放时使用固定的Y轴范围，正常模式动态计算
+            let yMin, yMax;
+            const initialCapital = config.initial_capital || 10000;
+            
+            if (replayState.isPlaying && replayState.savedAxisConfig) {
+                // 回放模式：使用固定的Y轴范围（纵轴不变）
+                yMin = replayState.savedAxisConfig.yMin;
+                yMax = replayState.savedAxisConfig.yMax;
+            } else {
+                // 正常模式：动态计算Y轴范围（纵轴随数据变化）
+                let allAssets = [];
+                series.forEach(s => {
+                    if (s && s.data) {
+                        s.data.forEach(d => {
+                            if (d !== null) allAssets.push(d);
+                        });
+                    }
+                });
+                
+                const minAsset = allAssets.length > 0 ? Math.min(...allAssets) : 10000;
+                const maxAsset = allAssets.length > 0 ? Math.max(...allAssets) : 10000;
+                
+                // 计算范围，确保有足够的padding留给标签
+                const dataRange = maxAsset - minAsset;
+                const minRange = initialCapital * 0.04;  // 最小显示范围：4%
+                const actualRange = Math.max(dataRange, minRange);
+                const padding = actualRange * 0.1;  // 10% padding留给标签
+                
+                // 基于实际数据范围计算Y轴
+                yMin = Math.floor((minAsset - padding) / 100) * 100;
+                yMax = Math.ceil((maxAsset + padding) / 100) * 100;
+            }
+            
+            // ✅ 固定图表高度，通过Y轴刻度自适应显示所有数据
+            const chartHeight = 600;  // 固定高度600px
+            document.getElementById('chart').style.height = `${chartHeight}px`;
+            
+            // 格式化X轴日期标签
+            const xAxisLabels = allDates.map(date => {
+                return `${date.substr(4,2)}-${date.substr(6,2)}`;
+            });
+            
+            // console.log(`🔍 updateChart: xAxisLabels.length=${xAxisLabels.length}, allDates.length=${allDates.length}`);
+            
+            // 创建波纹效果系列（effectScatter）- 回放时不显示
+            const rippleEffects = replayState.isPlaying ? [] : config.models.map((model, idx) => {
+                const modelData = data[model.id];  // ✅ 使用id而不是name
+                if (!modelData || !modelData.daily_assets || modelData.daily_assets.length === 0) return null;
+                
+                const latestAssets = modelData.daily_assets[modelData.daily_assets.length - 1].total_assets;
+                const latestDateStr = modelData.daily_assets[modelData.daily_assets.length - 1].date;
+                const latestDateIndex = allDates.indexOf(latestDateStr);
+                
+                if (latestDateIndex < 0) return null;
+                
+                return {
+                    name: `${model.name}_ripple`,
+                    type: 'effectScatter',
+                    coordinateSystem: 'cartesian2d',
+                    data: [[latestDateIndex, latestAssets]],
+                    symbolSize: 28,  // 波纹起始大小
+                    showEffectOn: 'render',
+                    rippleEffect: {
+                        period: 3.5,  // 总周期3.5秒（1秒扩散+2.5秒停顿）
+                        scale: 2.5,  // 放大倍数
+                        brushType: 'stroke',  // 线圈式波纹
+                        number: 1,  // 一次只显示1个波纹，实现间歇效果
+                        color: model.color  // 波纹颜色
+                    },
+                    itemStyle: {
+                        color: model.color,
+                        opacity: 0  // 中心点透明
+                    },
+                    zlevel: 0,  // 在底层
+                    z: 0,
+                    silent: true
+                };
+            }).filter(s => s !== null);
+            
+            const option = {
+                animation: replayState.isPlaying ? false : true,  // 回放时禁用动画，正常时启用
+                animationDuration: 0,  // 初始渲染无动画
+                animationDurationUpdate: replayState.isPlaying ? 0 : 200,  // 回放时无动画，正常时200ms
+                animationEasing: 'cubicOut',
+                tooltip: {
+                    trigger: 'axis',
+                    triggerOn: 'mousemove',
+                    axisPointer: {
+                        type: 'line',
+                        snap: true,
+                        lineStyle: {
+                            color: '#999',
+                            width: 1,
+                            type: 'dashed'
+                        },
+                        label: {
+                            show: false
+                        }
+                    },
+                    confine: true,
+                    transitionDuration: 0.2,
+                    hideDelay: 100,
+                    enterable: false,
+                    formatter: function(params) {
+                        // 获取日期索引
+                        const dateIndex = params[0].dataIndex;
+                        if (!allDates[dateIndex]) return '';  // 空白日期不显示
+                        
+                        const dateStr = allDates[dateIndex];
+                        const formatted = `${dateStr.substr(0,4)}-${dateStr.substr(4,2)}-${dateStr.substr(6,2)}`;
+                        
+                        let result = formatted + '<br/>';
+                        let hasData = false;
+                        params.forEach(p => {
+                            // 过滤掉ripple系列和初始资金线
+                            if (p.seriesName !== '初始资金' && 
+                                !p.seriesName.includes('_ripple') && 
+                                p.value !== null && 
+                                p.value !== undefined) {
+                                result += `${p.marker} ${p.seriesName}: ¥${p.value.toLocaleString()}<br/>`;
+                                hasData = true;
+                            }
+                        });
+                        return hasData ? result : '';  // 没有数据不显示tooltip
+                    }
+                },
+                legend: {
+                    data: config.models.map(m => m.name),
+                    top: 10,
+                    selected: config.models.reduce((obj, m) => {
+                        obj[m.name] = true;
+                        return obj;
+                    }, {})
+                },
+                grid: {
+                    left: '3%',
+                    right: '15%',  // 右侧留空间给末端标签
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: xAxisLabels,
+                    boundaryGap: false,
+                    min: undefined,  // 明确移除固定范围，恢复自适应
+                    max: undefined,  // 明确移除固定范围，恢复自适应
+                    axisLabel: {
+                        interval: 'auto'
+                    },
+                    axisPointer: {
+                        show: true
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '资产(元)',
+                    min: yMin,
+                    max: yMax,
+                    axisLabel: {
+                        formatter: value => `¥${value.toLocaleString()}`
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                            color: '#e0e0e0'
+                        }
+                    }
+                },
+                // 添加初始资金参考线和波纹效果
+                series: [
+                    ...series,  // 曲线和markPoint（zlevel=1）
+                    ...rippleEffects,  // 波纹（zlevel=0）
+                    {
+                        name: '初始资金',
+                        type: 'line',
+                        silent: true,  // 不响应鼠标事件
+                        emphasis: {
+                            disabled: true  // 禁用高亮
+                        },
+                        blur: {
+                            lineStyle: {
+                                opacity: 1  // 始终保持不透明
+                            }
+                        },
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            label: {
+                                show: true,
+                                position: 'insideEndTop',
+                                formatter: function(params) {
+                                    return `初始: ¥${params.value.toLocaleString()}`;
+                                },
+                                color: '#666',
+                                fontSize: 11
+                            },
+                            lineStyle: {
+                                color: '#ff9800',
+                                type: 'dashed',
+                                width: 2
+                            },
+                            data: [{
+                                yAxis: initialCapital
+                            }]
+                        },
+                        data: []
+                    }
+                ]
+            };
+            
+            // ✅ 回放时强制替换series（清除波纹），正常模式用merge
+            const setOptionConfig = replayState.isPlaying 
+                ? { replaceMerge: ['series'] }  // 强制替换所有series，清除旧的effectScatter
+                : {};  // 正常merge
+            
+            chart.setOption(option, setOptionConfig);
+            chart.resize();  // 重新调整图表大小以适应新高度
+            
+            // ✅ 保存之前的高亮状态
+            const wasHighlighted = highlightedModel;
+            
+            // 手动控制悬停效果
+            chart.off('mouseover');
+            chart.off('mouseout');
+            chart.off('mousemove');
+            
+            let currentHoverIndex = null;
+            let hoverTimeout = null;
+            
+            // 统一的高亮处理函数
+            function highlightSeries(hoverIndex) {
+                if (currentHoverIndex === hoverIndex) return;
+                
+                const option = chart.getOption();
+                
+                // 加粗当前曲线和图标，其他变透明
+                option.series.forEach((s, idx) => {
+                    if (s.name !== '初始资金' && !s.name.includes('_ripple')) {
+                        if (idx === hoverIndex) {
+                            s.lineStyle = { 
+                                width: 4, 
+                                color: s.lineStyle.color,
+                                opacity: 1
+                            };
+                            // markPoint图标保持不透明
+                            if (s.markPoint && s.markPoint.data) {
+                                s.markPoint.data.forEach(point => {
+                                    if (point.itemStyle) {
+                                        point.itemStyle.opacity = 1;
+                                    }
+                                });
+                            }
+                        } else {
+                            s.lineStyle = { 
+                                width: 2, 
+                                color: s.lineStyle.color,
+                                opacity: 0.3
+                            };
+                            // markPoint图标也变淡
+                            if (s.markPoint && s.markPoint.data) {
+                                s.markPoint.data.forEach(point => {
+                                    if (point.itemStyle) {
+                                        point.itemStyle.opacity = 0.3;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                chart.setOption(option, { notMerge: false, lazyUpdate: true, silent: true });
+                currentHoverIndex = hoverIndex;
+            }
+            
+            // 统一的恢复函数
+            function restoreAllSeries() {
+                if (currentHoverIndex === null) return;
+                
+                const option = chart.getOption();
+                
+                // 恢复所有曲线和图标
+                option.series.forEach((s, idx) => {
+                    if (s.name !== '初始资金' && !s.name.includes('_ripple')) {
+                        s.lineStyle = { 
+                            width: 2, 
+                            color: s.lineStyle.color,
+                            opacity: 1
+                        };
+                        // 恢复markPoint图标透明度
+                        if (s.markPoint && s.markPoint.data) {
+                            s.markPoint.data.forEach(point => {
+                                if (point.itemStyle) {
+                                    point.itemStyle.opacity = 1;
+                                }
+                            });
+                        }
+                    }
+                });
+                
+                chart.setOption(option, { notMerge: false, lazyUpdate: true, silent: true });
+                currentHoverIndex = null;
+            }
+            
+            // 使用mousemove更稳定
+            chart.on('mousemove', function(params) {
+                if (highlightedModel !== null) return;
+                
+                // 清除之前的超时
+                if (hoverTimeout) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = null;
+                }
+                
+                // 在series或markPoint上
+                if ((params.componentType === 'series' || params.componentType === 'markPoint') && 
+                    params.seriesName !== '初始资金') {
+                    highlightSeries(params.seriesIndex);
+                } else {
+                    // 不在任何series上，延迟恢复
+                    hoverTimeout = setTimeout(() => {
+                        restoreAllSeries();
+                    }, 50);
+                }
+            });
+            
+            // 监听鼠标离开图表区域
+            chart.getZr().on('mouseout', function() {
+                if (highlightedModel !== null) return;
+                restoreAllSeries();
+            });
+            
+            // ✅ 恢复之前的高亮状态（如果有）
+            if (wasHighlighted) {
+                // 延迟一帧执行，确保事件监听器已绑定
+                setTimeout(() => {
+                    toggleModelHighlight(wasHighlighted, null);
+                }, 50);
+            }
+        }
+        
+        // ✅ 排名已合并到模型卡片，此函数不再使用
+        // function updateRankings(rankings) { ... }
+        
+        // 更新交易记录（卡片式时间线）
+        function updateTradesTable(data) {
+            const trades = [];
+            
+            // 合并所有模型的交易记录
+            Object.keys(data).forEach(modelKey => {
+                const modelData = data[modelKey];
+                // ✅ 通过id或name找到对应的模型配置，获取显示名称
+                const modelConfig = config.models.find(m => m.id === modelKey || m.name === modelKey);
+                const displayName = modelConfig ? modelConfig.name : modelKey;
+                
+                if (modelData.trade_history) {
+                    modelData.trade_history.forEach(trade => {
+                        trades.push({
+                            model: displayName,  // ✅ 使用显示名称而不是key
+                            color: modelData.model_color,
+                            ...trade
+                        });
+                    });
+                }
+            });
+            
+            // 按日期和时间倒序排序（最新的在上面）
+            trades.sort((a, b) => {
+                // 先按日期比较
+                const dateCompare = b.date.localeCompare(a.date);
+                if (dateCompare !== 0) return dateCompare;
+                
+                // 日期相同时，按时间比较（有时间的优先，时间晚的在前）
+                const timeA = a.time || '00:00:00';
+                const timeB = b.time || '00:00:00';
+                return timeB.localeCompare(timeA);
+            });
+            
+            // 更新右侧Tab
+            const container = document.getElementById('tradesTableRight');
+            if (container) {
+                if (trades.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-400 text-xs py-4">暂无交易记录</div>';
+                    return;
+                }
+                
+                container.innerHTML = trades.slice(0, 30).map(t => {
+                    const isBuy = t.action === 'buy';
+                    const actionText = isBuy ? '买入' : '卖出';
+                    
+                    // 格式化日期和时间
+                    const dateStr = `${t.date.substr(0,4)}年${t.date.substr(4,2)}月${t.date.substr(6,2)}日`;
+                    const timeStr = t.time ? ` ${t.time}` : '';
+                    const dateTimeStr = dateStr + timeStr;
+                    
+                    // 计算盈亏（如果有的话）- 卖出时显示，排除null值
+                    const profitHtml = (t.profit !== undefined && t.profit !== null) ? `
+                        <div class="mt-2 pt-2 border-t border-gray-300">
+                            <div class="flex justify-between items-center">
+                                <span class="text-xs font-medium text-gray-600">💰 净损益:</span>
+                                <span class="text-sm font-bold ${t.profit >= 0 ? 'text-red-600' : 'text-green-600'}">
+                                    ${t.profit >= 0 ? '+' : ''}¥${t.profit.toFixed(2)}
+                                    ${(t.profit_pct !== undefined && t.profit_pct !== null) ? `
+                                        <span class="text-xs ml-1">
+                                            (${t.profit_pct >= 0 ? '+' : ''}${t.profit_pct.toFixed(2)}%)
+                                        </span>
+                                    ` : ''}
+                                </span>
+                            </div>
+                        </div>
+                    ` : '';
+                    
+                    // 获取模型logo
+                    const model = config.models.find(m => m.name === t.model);
+                    const logoHtml = model?.logo ? `<img src="${model.logo}" class="w-4 h-4 inline-block" />` : '';
+                    
+                    return `
+                        <div class="mb-2 p-2 bg-gray-50 rounded border-l-3" style="border-left: 3px solid ${t.color}">
+                            <div class="flex justify-between items-start mb-1">
+                                <div class="flex items-center gap-1">
+                                    ${logoHtml}
+                                    <span class="font-bold text-xs" style="color: ${t.color}">${t.model}</span>
+                                    <span class="text-xs ${isBuy ? 'text-red-600' : 'text-green-600'}">${actionText}</span>
+                                    <span class="text-xs font-bold">${t.name || '未知'}</span>
+                                </div>
+                                <span class="text-xs text-gray-400">${dateTimeStr}</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <div>代码: ${t.code} | 名称: ${t.name || '未知'}</div>
+                                <div>价格: ¥${t.price != null ? t.price.toFixed(2) : 'N/A'}</div>
+                                <div>数量: ${t.amount != null ? t.amount : 'N/A'}</div>
+                                <div>总额: ¥${t.total != null ? t.total.toFixed(2) : 'N/A'}</div>
+                                ${(t.commission != null) ? `<div>手续费: ¥${t.commission.toFixed(2)}</div>` : ''}
+                                ${profitHtml}
+                            </div>
+                            ${t.reason ? `<div class="mt-1 text-xs text-gray-500 italic">${t.reason}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        // 更新持仓表（按模型分组的卡片式）
+        function updateHoldingsTable(data) {
+            const container = document.getElementById('holdingsTableRight');
+            if (!container) return;
+            
+            // 按模型分组
+            const modelGroups = [];
+            Object.keys(data).forEach(modelKey => {
+                const modelData = data[modelKey];
+                // ✅ 通过id或name找到对应的模型配置，获取显示名称
+                const modelConfig = config.models.find(m => m.id === modelKey || m.name === modelKey);
+                const displayName = modelConfig ? modelConfig.name : modelKey;
+                
+                // ✅ 兼容数组和对象格式的holdings
+                const holdings = Array.isArray(modelData.holdings) 
+                    ? modelData.holdings 
+                    : (modelData.holdings ? Object.values(modelData.holdings) : []);
+                
+                if (holdings && holdings.length > 0) {
+                    
+                    // 计算总盈亏
+                    const totalProfit = holdings.reduce((sum, h) => {
+                        return sum + (h.current_price - h.cost) * h.amount;
+                    }, 0);
+                    
+                    const totalValue = holdings.reduce((sum, h) => sum + h.current_price * h.amount, 0);
+                    const totalCost = holdings.reduce((sum, h) => sum + h.cost * h.amount, 0);
+                    const totalProfitPct = ((totalValue - totalCost) / totalCost) * 100;
+                    
+                    modelGroups.push({
+                        modelName: displayName,  // ✅ 使用显示名称
+                        modelConfig: modelConfig,  // ✅ 保存模型配置以便后续使用
+                        color: modelData.model_color,
+                        holdings,
+                        totalProfit,
+                        totalProfitPct
+                    });
+                }
+            });
+            
+            if (modelGroups.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-400 text-xs py-4">暂无持仓</div>';
+                return;
+            }
+            
+            // 渲染分组卡片
+            container.innerHTML = modelGroups.map(group => {
+                // 获取模型logo（从保存的modelConfig获取）
+                const model = group.modelConfig;
+                const logoHtml = model?.logo ? `<img src="${model.logo}" class="w-5 h-5 inline-block mr-1" />` : '';
+                
+                return `
+                <div class="mb-4 bg-gray-50 rounded p-2" style="border-left: 3px solid ${group.color}">
+                    <div class="flex justify-between items-center mb-2 pb-2 border-b">
+                        <div class="flex items-center">
+                            ${logoHtml}
+                            <span class="font-bold text-sm" style="color: ${group.color}">${group.modelName}</span>
+                        </div>
+                        <span class="text-xs font-bold ${group.totalProfitPct >= 0 ? 'text-red-600' : 'text-green-600'}">
+                            ${group.totalProfitPct >= 0 ? '+' : ''}${group.totalProfitPct.toFixed(2)}% (${group.totalProfitPct >= 0 ? '+' : ''}¥${group.totalProfit.toFixed(2)})
+                        </span>
+                    </div>
+                    ${group.holdings.map(h => {
+                        // 修复：直接从h对象获取股票代码和名称
+                        const stockCode = h.code || h.stock_code || '';
+                        const stockName = h.name || h.stock_name || stockCode;
+                        
+                        // 计算总价和盈亏
+                        const totalValue = h.current_price * h.amount;  // 总价
+                        const totalCost = h.cost * h.amount;  // 总成本
+                        const profit = totalValue - totalCost;  // 盈亏金额
+
+                        return `
+                        <div class="flex justify-between items-center py-1 text-xs border-b border-gray-200">
+                            <div class="flex-1">
+                                <div class="font-medium">${stockName}</div>
+                                <div class="text-gray-500">${stockCode} | 持仓: ${h.amount} | 成本: ¥${h.cost.toFixed(2)}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="font-medium">¥${h.current_price.toFixed(2)}</div>
+                                <div class="text-gray-600">总价: ¥${totalValue.toFixed(2)}</div>
+                                <div class="${profit >= 0 ? 'text-red-600' : 'text-green-600'}">
+                                    ${profit >= 0 ? '+' : ''}¥${profit.toFixed(2)} (${h.profit_pct >= 0 ? '+' : ''}${h.profit_pct.toFixed(2)}%)
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            }).join('');
+        }
+        
+        // 更新AI日志（增量）
+        async function updateAILogs() {
+            try {
+                const allLogs = [];
+                
+                // 获取所有模型的日志
+                for (const model of config.models) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/arena/logs/${model.name}?limit=20`);
+                        const data = await res.json();
+                        if (data.logs && data.logs.length > 0) {
+                            allLogs.push(...data.logs.map(log => ({
+                                ...log,
+                                color: model.color
+                            })));
+                        }
+                    } catch (error) {
+                        console.error(`❌ 获取${model.name}日志失败:`, error);
+                    }
+                }
+                
+                // 按时间倒序排序（最新的在前）
+                allLogs.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+                
+                // 只显示最新的50条
+                const logs = allLogs.slice(0, 50);
+                
+                if (logs.length === 0) return;
+                
+                const container = document.getElementById('aiLogs');
+                
+                // ✅ 计算日志内容的hash，判断是否真的有变化
+                const logsHash = logs.map(l => l.timestamp + l.message).join('|');
+                if (logsHash !== lastLogsHash) {
+                    container.innerHTML = logs.map(log => {
+                        const type = log.type || 'info';
+                        
+                        // ✅ 显示logo，消息里已经包含模型名和时间
+                        const model = config.models.find(m => m.name === log.model_name);
+                        const logoHtml = model?.logo ? `<img src="${model.logo}" class="w-5 h-5 inline-block mr-2" />` : '';
+                        
+                        return `
+                            <div class="log-entry log-${type} flex items-start gap-2">
+                                ${logoHtml}
+                                <div class="flex-1">${log.message}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    // 保持在顶部（最新消息在上）
+                    container.scrollTop = 0;
+                    lastLogsHash = logsHash;  // 保存新的hash
+                }
+            } catch (error) {
+                console.error('更新AI日志失败:', error);
+            }
+        }
+        
+        // Tab切换
+        function switchTab(tabName) {
+            // 隐藏所有tab内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // 移除所有按钮的active状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的tab（使用block布局）
+            document.getElementById(`tab-${tabName}`).style.display = 'block';
+            
+            // 激活对应按钮
+            event.target.classList.add('active');
+        }
+        
+        // 定时轮询
+        let aiLogsIntervalId = null;  // AI日志轮询ID（独立）
+        
+        function startPolling() {
+            updateUI();
+            replayState.normalUpdateIntervalId = setInterval(updateUI, 3000);  // ✅ 优化：从10秒改为3秒，提升更新频率
+            
+            // ✅ AI日志单独轮询，更频繁（2秒）
+            if (!aiLogsIntervalId) {
+                aiLogsIntervalId = setInterval(updateAILogs, 2000);
+            }
+        }
+        
+        // 停止正常轮询
+        function stopPolling() {
+            if (replayState.normalUpdateIntervalId) {
+                clearInterval(replayState.normalUpdateIntervalId);
+                replayState.normalUpdateIntervalId = null;
+            }
+            
+            // ✅ 停止AI日志轮询
+            if (aiLogsIntervalId) {
+                clearInterval(aiLogsIntervalId);
+                aiLogsIntervalId = null;
+            }
+        }
+        
+        // 回放：切换播放/停止
+        async function toggleReplay() {
+            if (replayState.isPlaying) {
+                await stopReplay();
+            } else {
+                await startReplay();
+            }
+        }
+        
+        // 开始回放
+        async function startReplay() {
+            const btn = document.getElementById('replayBtn');
+            
+            // ✅ 显示加载提示（放在最前面）
+            btn.textContent = '⏳ 加载中...';
+            btn.disabled = true;
+            btn.classList.remove('bg-blue-500', 'hover:bg-blue-600');
+            btn.classList.add('bg-red-500', 'hover:bg-red-600');
+            
+            // 停止轮询，由回放完全控制渲染
+            stopPolling();
+            
+            // 设置回放模式（隐藏波纹）
+            replayState.isReplayMode = true;
+            
+            // 保存当前图表的坐标轴配置（用于回放时保持一致）
+            const currentOption = chart.getOption();
+            replayState.savedAxisConfig = {
+                xAxisLabels: currentOption.xAxis[0].data,
+                yMin: currentOption.yAxis[0].min,
+                yMax: currentOption.yAxis[0].max,
+                initialCapital: config.initial_capital || 10000
+            };
+            
+            // 获取完整数据
+            if (!replayState.fullData) {
+                try {
+                    console.log('📥 正在获取历史数据...');
+                    const response = await fetch(`${API_BASE}/api/arena/data`);
+                    replayState.fullData = await response.json();
+                    console.log('✅ 历史数据加载完成');
+                } catch (error) {
+                    console.error('获取回放数据失败:', error);
+                    replayState.isReplayMode = false;  // 恢复正常模式
+                    btn.textContent = '⏯️ 回放';
+                    btn.disabled = false;
+                    btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                    btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+                    startPolling();
+                    return;
+                }
+            }
+            
+            // ✅ 恢复按钮状态
+            btn.disabled = false;
+            
+            // 初始化图表配置（不清除series，统一用updateChart渲染）
+            initReplayChart();
+            
+            // 只设置固定的横轴和纵轴配置
+            chart.setOption({
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const dateIndex = params[0].dataIndex;
+                        const dateStr = replayState.allDates[dateIndex];
+                        const formatted = `${dateStr.substr(0,4)}-${dateStr.substr(4,2)}-${dateStr.substr(6,2)}`;
+                        
+                        let result = formatted + '<br/>';
+                        params.forEach(p => {
+                            // 过滤掉ripple系列和初始资金线
+                            if (p.seriesName !== '初始资金' && 
+                                !p.seriesName.includes('_ripple') && 
+                                p.value !== null && 
+                                p.value !== undefined) {
+                                result += `${p.marker} ${p.seriesName}: ¥${p.value.toLocaleString()}<br/>`;
+                            }
+                        });
+                        return result;
+                    }
+                },
+                legend: {
+                    data: config.models.map(m => m.name),
+                    top: 10
+                },
+                grid: {
+                    left: '3%',
+                    right: '15%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: replayState.fixedAxisConfig.xAxisLabels,
+                    boundaryGap: false,
+                    min: 0,
+                    max: replayState.fixedAxisConfig.xAxisLabels.length - 1,
+                    axisLabel: {
+                        interval: 'auto'
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '资产(元)',
+                    min: replayState.fixedAxisConfig.yMin,
+                    max: replayState.fixedAxisConfig.yMax,
+                    axisLabel: {
+                        formatter: value => `¥${value.toLocaleString()}`
+                    },
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                            color: '#e0e0e0'
+                        }
+                    }
+                }
+            });  // 使用默认merge模式
+            
+            // 重置资产卡片为初始值
+            const initialCapital = config.initial_capital || 10000;
+            config.models.forEach(model => {
+                const assetEl = document.getElementById(`asset-${model.name}`);
+                const profitEl = document.getElementById(`profit-${model.name}`);
+                if (assetEl && profitEl) {
+                    assetEl.textContent = `¥${initialCapital.toLocaleString()}`;
+                    profitEl.textContent = '0.00%';
+                    profitEl.className = 'text-sm font-medium text-gray-600';
+                }
+            });
+            
+            // 开始播放
+            replayState.isPlaying = true;
+            replayState.currentIndex = 0;
+            replayState.currentSubStep = 0;
+            
+            // ✅ 立即渲染一次初始状态（清除波纹，显示第一天数据）
+            const initialReplayData = {};
+            Object.keys(replayState.fullData).forEach(modelName => {
+                const modelData = replayState.fullData[modelName];
+                const firstDay = modelData.daily_assets && modelData.daily_assets.length > 0 
+                    ? [modelData.daily_assets[0]]  // 只取第一天
+                    : [];
+                initialReplayData[modelName] = {
+                    ...modelData,
+                    daily_assets: firstDay
+                };
+            });
+            console.log('🎬 开始回放，清除波纹并显示第一天');
+            updateChart(initialReplayData);  // 触发updateChart，此时isPlaying=true会清除波纹
+            
+            // ✅ 动态计算速度：总时长 / (总天数 * 插值步数)
+            const totalDays = replayState.allDates.length - 3;  // -3因为有3个空白日期
+            const totalFrames = totalDays * replayState.interpolationSteps;
+            replayState.speed = Math.max(30, Math.floor(replayState.totalDuration / totalFrames));  // 最小30ms
+            const actualDuration = (replayState.speed * totalFrames / 1000).toFixed(1);
+            console.log(`📺 回放配置: ${totalDays}天, ${replayState.interpolationSteps}倍插值, ${totalFrames}帧, ${replayState.speed}ms/帧, 总时长${actualDuration}秒`);
+            
+            // 更新按钮文字显示预计时长
+            btn.textContent = `⏸️ 停止 (${actualDuration}s)`;
+            
+            replayState.intervalId = setInterval(() => {
+                // ✅ 检查是否已停止（防止clearInterval延迟）
+                if (!replayState.isPlaying) {
+                    console.log('⚠️ 检测到已停止，退出回调');
+                    return;
+                }
+                
+                // ✅ 计算插值比例 (0.0 - 1.0)
+                const t = replayState.currentSubStep / replayState.interpolationSteps;
+                
+                // ✅ 构造插值后的数据（关键：保持完整长度，未到达的用null）
+                const replayData = {};
+                Object.keys(replayState.fullData).forEach(modelName => {
+                    const modelData = replayState.fullData[modelName];
+                    const assets = modelData.daily_assets || [];
+                    
+                    // ✅ 创建完整长度的数组（与allDates一致）
+                    const interpolatedAssets = [];
+                    
+                    for (let i = 0; i < replayState.allDates.length - 3; i++) {  // -3因为有3个空白日期
+                        const dateStr = replayState.allDates[i];
+                        
+                        if (i < replayState.currentIndex) {
+                            // 已播放的天，直接用原数据
+                            if (assets[i]) {
+                                interpolatedAssets.push(assets[i]);
+                            }
+                            // ✅ 如果没有数据就跳过，不push（让dateMap构造时自动为null）
+                        } else if (i === replayState.currentIndex) {
+                            // 当前正在播放的天，做插值
+                            const current = assets[i];
+                            const next = assets[i + 1];
+                            if (current && next && t > 0) {
+                                // 线性插值total_assets
+                                const interpolatedValue = current.total_assets + (next.total_assets - current.total_assets) * t;
+                                interpolatedAssets.push({
+                                    date: dateStr,
+                                    total_assets: interpolatedValue
+                                });
+                            } else if (current) {
+                                interpolatedAssets.push(current);
+                            }
+                            // ✅ 如果没有数据就跳过
+                        }
+                        // ✅ 未到达的天，不push任何数据（让它们在图表上显示为空）
+                    }
+                    
+                    replayData[modelName] = {
+                        ...modelData,
+                        daily_assets: interpolatedAssets
+                    };
+                });
+                
+                // ✅ 直接调用updateChart，统一渲染逻辑！
+                updateChart(replayData);
+                
+                // 更新进度条
+                const currentDate = replayState.allDates[replayState.currentIndex];
+                const formatted = `${currentDate.substr(0,4)}-${currentDate.substr(4,2)}-${currentDate.substr(6,2)}`;
+                const totalDaysForProgress = replayState.allDates.length - 3;  // 排除空白日期
+                const totalFramesForProgress = totalDaysForProgress * replayState.interpolationSteps;
+                const percent = Math.floor(((replayState.currentIndex * replayState.interpolationSteps + replayState.currentSubStep) / totalFramesForProgress) * 100);
+                document.getElementById('progressText').textContent = `⏯️ 回放中: ${formatted}`;
+                document.getElementById('progressPercent').textContent = `${percent}%`;
+                document.getElementById('progressBar').style.width = `${percent}%`;
+                
+                // 推进子步骤
+                replayState.currentSubStep++;
+                if (replayState.currentSubStep >= replayState.interpolationSteps) {
+                    replayState.currentSubStep = 0;
+                    replayState.currentIndex++;
+                }
+                
+                // 检查是否播放完成（-3因为有3个空白日期）
+                if (replayState.currentIndex >= replayState.allDates.length - 3) {
+                    console.log('✅ 回放完成，自动停止');
+                    stopReplay();
+                }
+            }, replayState.speed);
+        }
+        
+        // 停止回放
+        async function stopReplay() {
+            console.log('🛑 停止回放: intervalId=', replayState.intervalId);
+            
+            // 立即清除定时器（关键：必须先清除）
+            if (replayState.intervalId) {
+                clearInterval(replayState.intervalId);
+                replayState.intervalId = null;
+                console.log('✅ 定时器已清除');
+            }
+            
+            // 立即切换状态（关键：在任何渲染之前）
+            replayState.isPlaying = false;
+            replayState.isReplayMode = false;
+            replayState.currentIndex = 0;
+            replayState.currentSubStep = 0;
+            console.log('✅ 状态已重置');
+            
+            // 清空回放缓存
+            replayState.fullData = null;
+            replayState.allDates = [];
+            
+            // 更新按钮
+            const btn = document.getElementById('replayBtn');
+            btn.textContent = '⏯️ 回放';
+            btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+            btn.classList.add('bg-blue-500', 'hover:bg-blue-600');
+            
+            // ✅ 立即重置进度条（防止继续动画）
+            document.getElementById('progressText').textContent = '等待开始...';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressBar').style.width = '0%';
+            
+            console.log('🔄 回放结束，恢复正常模式');
+            
+            // 延迟100ms再恢复轮询，确保状态完全切换
+            setTimeout(() => {
+                startPolling();
+                console.log('✅ 轮询已恢复');
+            }, 100);
+        }
+        
+        // 初始化回放图表（使用保存的坐标轴配置）
+        function initReplayChart() {
+            // 从完整数据中提取所有日期
+            const allDatesSet = new Set();
+            Object.values(replayState.fullData).forEach(modelData => {
+                if (modelData.daily_assets) {
+                    modelData.daily_assets.forEach(d => {
+                        allDatesSet.add(d.date);
+                    });
+                }
+            });
+            
+            replayState.allDates = Array.from(allDatesSet).sort();
+            
+            // 在末尾添加3个空白日期（与正常模式保持一致，避免横轴跳变）
+            if (replayState.allDates.length > 0) {
+                const lastDate = replayState.allDates[replayState.allDates.length - 1];
+                const year = parseInt(lastDate.substr(0, 4));
+                const month = parseInt(lastDate.substr(4, 2));
+                const day = parseInt(lastDate.substr(6, 2));
+                
+                for (let i = 1; i <= 3; i++) {
+                    const nextDate = new Date(year, month - 1, day + i);
+                    const nextDateStr = `${nextDate.getFullYear()}${String(nextDate.getMonth() + 1).padStart(2, '0')}${String(nextDate.getDate()).padStart(2, '0')}`;
+                    replayState.allDates.push(nextDateStr);
+                }
+            }
+            
+            // 生成完整的X轴标签（基于fullData的完整日期范围 + 3个空白日期）
+            const xAxisLabels = replayState.allDates.map(date => {
+                return `${date.substr(4,2)}-${date.substr(6,2)}`;
+            });
+            
+            // 使用保存的Y轴配置（保持和回放前一致）
+            const yMin = replayState.savedAxisConfig.yMin;
+            const yMax = replayState.savedAxisConfig.yMax;
+            
+            // ✅ 固定图表高度
+            const chartHeight = 600;
+            document.getElementById('chart').style.height = `${chartHeight}px`;
+            
+            // 回放时使用完整的固定X轴标签
+            replayState.fixedAxisConfig = {
+                xAxisLabels: xAxisLabels,  // 使用完整日期范围
+                yMin,
+                yMax,
+                initialCapital: replayState.savedAxisConfig.initialCapital
+            };
+        }
+        
+        // 渲染回放帧（支持插值的平滑播放）
+        function renderReplayFrame(index, subStep) {
+            // 插值比例 (0 到 1)
+            const t = subStep / replayState.interpolationSteps;
+            
+            // 为每个模型创建数据数组
+            const series = config.models.map(model => {
+                const modelData = replayState.fullData[model.id];  // ✅ 使用id而不是name
+                if (!modelData || !modelData.daily_assets) return null;
+                
+                // 创建完整长度的数组
+                const dataPoints = new Array(replayState.allDates.length).fill(null);
+                
+                // 找到当前最新的资产值（用于显示标签）
+                let latestAssets = 10000;
+                let latestDateIndex = -1;
+                let currentValue = 10000;  // 用于插值显示
+                
+                // 构建日期到资产的映射
+                const dateValueMap = {};
+                modelData.daily_assets.forEach(d => {
+                    dateValueMap[d.date] = d.total_assets;
+                });
+                
+                // 填充数据（包含插值）
+                for (let i = 0; i <= index; i++) {
+                    const date = replayState.allDates[i];
+                    const value = dateValueMap[date];
+                    
+                    if (value !== undefined) {
+                        if (i < index) {
+                            // 已完成的数据点，直接使用
+                            dataPoints[i] = value;
+                        } else {
+                            // 当前正在播放的数据点，需要插值
+                            const prevIndex = i - 1;
+                            if (prevIndex >= 0 && dateValueMap[replayState.allDates[prevIndex]] !== undefined) {
+                                const prevValue = dateValueMap[replayState.allDates[prevIndex]];
+                                // 线性插值
+                                dataPoints[i] = prevValue + (value - prevValue) * t;
+                                currentValue = dataPoints[i];
+                            } else {
+                                dataPoints[i] = value * t;
+                                currentValue = dataPoints[i];
+                            }
+                        }
+                        
+                        if (i >= latestDateIndex) {
+                            latestDateIndex = i;
+                            latestAssets = dataPoints[i];
+                        }
+                    }
+                }
+                
+                // ✅ 动态填充null值（线性插值），避免断线
+                for (let i = 0; i <= index; i++) {
+                    if (dataPoints[i] === null) {
+                        // 找到前一个非null值
+                        let prevValue = null;
+                        let prevIndex = -1;
+                        for (let j = i - 1; j >= 0; j--) {
+                            if (dataPoints[j] !== null) {
+                                prevValue = dataPoints[j];
+                                prevIndex = j;
+                                break;
+                            }
+                        }
+                        
+                        // 找到后一个非null值
+                        let nextValue = null;
+                        let nextIndex = -1;
+                        for (let j = i + 1; j <= index; j++) {
+                            if (dataPoints[j] !== null) {
+                                nextValue = dataPoints[j];
+                                nextIndex = j;
+                                break;
+                            }
+                        }
+                        
+                        // 线性插值填充
+                        if (prevValue !== null && nextValue !== null) {
+                            const ratio = (i - prevIndex) / (nextIndex - prevIndex);
+                            dataPoints[i] = prevValue + (nextValue - prevValue) * ratio;
+                        } else if (prevValue !== null) {
+                            // 只有前值，保持不变
+                            dataPoints[i] = prevValue;
+                        } else if (nextValue !== null) {
+                            // 只有后值，使用后值
+                            dataPoints[i] = nextValue;
+                        }
+                    }
+                }
+                
+                // 更新资产卡片（使用插值后的值）
+                const assetEl = document.getElementById(`asset-${model.name}`);
+                const profitEl = document.getElementById(`profit-${model.name}`);
+                if (assetEl && profitEl && latestDateIndex >= 0) {
+                    assetEl.textContent = `¥${Math.round(currentValue).toLocaleString()}`;
+                    const initialCapital = config.initial_capital || 10000;
+                    const profitPct = ((currentValue - initialCapital) / initialCapital) * 100;
+                    profitEl.textContent = `${profitPct >= 0 ? '+' : ''}${profitPct.toFixed(2)}%`;
+                    profitEl.className = `text-sm font-medium ${profitPct >= 0 ? 'text-red-600' : 'text-green-600'}`;
+                }
+                
+                return {
+                    name: model.name,
+                    type: 'line',
+                    data: dataPoints,
+                    itemStyle: { color: model.color },
+                    lineStyle: { width: 2, color: model.color },
+                    smooth: true,
+                    animation: false,
+                    symbol: 'none',
+                    zlevel: 0,  // 降低曲线层级
+                    z: 1,
+                    connectNulls: true,  // 连接null值，避免断线
+                    // 添加末端标记（使用插值后的值）
+                    markPoint: latestDateIndex >= 0 ? {
+                        silent: false,
+                        animation: false,  // 回放时禁用markPoint动画
+                        animationDuration: 0,
+                        animationDurationUpdate: 0,
+                        emphasis: {
+                            scale: 1.2  // 悬停时放大（与正常模式一致）
+                        },
+                        data: [
+                            // 图标
+                            {
+                                xAxis: latestDateIndex,
+                                yAxis: currentValue,  // 使用插值后的当前值
+                                symbol: model.logo ? `image://${model.logo}` : 'circle',
+                                symbolSize: model.logo ? [32, 32] : 30,
+                                symbolOffset: [0, 0],
+                                z: 999,  // 单独设置z层级
+                                itemStyle: {
+                                    color: model.logo ? 'transparent' : model.color,
+                                    borderColor: model.color,
+                                    borderWidth: 3
+                                },
+                                label: {
+                                    show: false
+                                }
+                            },
+                            // 金额标签
+                            {
+                                xAxis: latestDateIndex,
+                                yAxis: currentValue,  // 使用插值后的当前值
+                                symbol: 'rect',
+                                symbolSize: [110, 26],
+                                symbolOffset: [75, 0],
+                                z: 999,  // 单独设置z层级
+                                itemStyle: {
+                                    color: model.color,
+                                    borderWidth: 0
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: `¥${Math.round(currentValue).toLocaleString()}`,
+                                    color: '#fff',
+                                    fontSize: 12,
+                                    fontWeight: 'bold',
+                                    padding: [2, 8]
+                                }
+                            }
+                        ]
+                    } : undefined
+                };
+            }).filter(s => s !== null);
+            
+            // ✅ 添加空的波纹series占位（与正常模式保持series结构一致）
+            const emptyRippleSeries = config.models.map(model => ({
+                name: `${model.name}_ripple`,
+                type: 'effectScatter',
+                data: [],  // 空数据，不显示
+                silent: true
+            }));
+            
+            // 完全替换series（保持与正常模式相同的series结构）
+            chart.setOption({
+                series: [
+                    ...series,
+                    ...emptyRippleSeries,  // ✅ 波纹占位
+                    {
+                        name: '初始资金',
+                        type: 'line',
+                        silent: true,
+                        markLine: {
+                            silent: true,
+                            symbol: 'none',
+                            label: {
+                                show: true,
+                                position: 'insideEndTop',
+                                formatter: () => `初始: ¥${replayState.fixedAxisConfig.initialCapital.toLocaleString()}`,
+                                color: '#666',
+                                fontSize: 11
+                            },
+                            lineStyle: {
+                                color: '#ff9800',
+                                type: 'dashed',
+                                width: 2
+                            },
+                            data: [{ yAxis: replayState.fixedAxisConfig.initialCapital }]
+                        },
+                        data: []
+                    }
+                ]
+            }, {
+                notMerge: false,  // ✅ 使用merge模式，保留markPoint
+                lazyUpdate: false,  // 立即更新
+                silent: true  // 静默更新，不触发事件
+            });
+        }
+        
+        // 页面加载完成后初始化
+        window.onload = init;
+    </script>
+</body>
+</html>
