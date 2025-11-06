@@ -24,11 +24,12 @@
 - [中文版本](#-中文版本)
   - [项目简介](#项目简介)
   - [核心特性](#核心特性)
-  - [快速开始](#快速开始)
-  - [部署指南](#部署指南)
-  - [配置说明](#配置说明)
-  - [项目结构](#项目结构)
-  - [常见问题](#常见问题)
+  - [快速开始](#-快速开始)
+  - [配置说明](#️-配置说明)
+  - [项目结构](#-项目结构)
+  - [使用说明](#-使用说明)
+  - [技术架构](#-技术架构)
+  - [故障排查](#-故障排查)
 - [English Version](#english)
   - [Introduction](#-introduction)
   - [Key Features](#-key-features)
@@ -103,16 +104,11 @@
 
 #### 2. 获取代码
 
-**方式1：Git克隆（推荐）**
+**方式：Git克隆（推荐）**
 ```bash
 git clone https://github.com/gtd138/QuantArenaOSS.git
 cd QuantArenaOSS
 ```
-
-**方式2：直接下载**
-- 访问 [Releases](https://github.com/YOUR_USERNAME/LHArena/releases)
-- 下载最新版本的源码压缩包
-- 解压到本地目录
 
 #### 3. 安装依赖
 
